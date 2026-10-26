@@ -70,7 +70,13 @@ wristwire doctor          # config, adb, phone, agent
 wristwire adb-bridge      # runs the relay with the USB phone link
 ```
 
-To keep it running in the background, install the service in [`systemd/wristwire.service`](systemd/wristwire.service). The install steps are at the top of that file.
+To keep it running in the background (and start it again after a reboot), install it as a service. Stop the `adb-bridge` you started above with Ctrl+C first, then run this from the `wristwire` folder:
+
+```bash
+./deploy.sh install-service
+```
+
+It checks the service started and tells you where the log is.
 
 **6. Try it.** Run `wristwire dashboard` and open the link it prints. Press **Send test message** to check the path back to your watch, then send something from the watch, such as "What's on my calendar today?"
 

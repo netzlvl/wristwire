@@ -8,6 +8,7 @@
 #   init-repo [dir]      Install the `wristwire` command into ~/.local/bin and write a
 #                        .env with fresh secrets. Never overwrites existing files.
 #   install-cli [dir]    Only install the `wristwire` command.
+#   install-service      Install and start the background service (systemd, Linux/WSL2).
 #   pull                 Update this clone from GitHub (fast-forward only).
 #   send "<message>"     Queue a message for the watch through the running relay.
 #   print-tailscale      Print a Tailscale ACL that lets the phone reach only the relay.
@@ -170,6 +171,30 @@ case "$MODE" in
     install_cli_binary "${2:-.}"
     ;;
 
+  install-service)
+    # Works from any folder: the unit file is found next to this script.
+    if ! command -v systemctl >/dev/null 2>&1 || ! systemctl --user show-environment >/dev/null 2>&1; then
+      echo "systemd isn't available for your user. On WSL2, add 'systemd=true' under [boot] in"
+      echo "/etc/wsl.conf, run 'wsl --shutdown' from Windows, reopen WSL and try again."
+      echo "Or run the relay in a terminal instead: wristwire adb-bridge"
+      exit 1
+    fi
+    install_cli_binary "$SCRIPT_DIR" >/dev/null
+    mkdir -p "${HOME}/.config/systemd/user"
+    cp "${SCRIPT_DIR}/systemd/wristwire.service" "${HOME}/.config/systemd/user/wristwire.service"
+    systemctl --user daemon-reload
+    systemctl --user enable --now wristwire.service
+    sleep 2
+    if systemctl --user is-active --quiet wristwire.service; then
+      echo "WristWire is running. Logs: ~/.local/state/wristwire/relay.log"
+      echo "Next: run 'wristwire dashboard' and open the link it prints."
+    else
+      echo "The service didn't start. Last log lines:"
+      tail -n 20 "${HOME}/.local/state/wristwire/relay.log" 2>/dev/null || systemctl --user status wristwire.service --no-pager
+      exit 1
+    fi
+    ;;
+
   init-repo)
     TARGET_DIR="${2:-.}"
     scaffold_repo_files "$TARGET_DIR"
@@ -304,6 +329,6 @@ EOF
     ;;
 
   *)
-    echo "Usage: $0 {init-repo|install-cli|pull|send|print-tailscale|tasker-inspect|tasker-ingest|tasker-poll|tasker-ack|tasker-heartbeat}"
+    echo "Usage: $0 {init-repo|install-cli|install-service|pull|send|print-tailscale|tasker-inspect|tasker-ingest|tasker-poll|tasker-ack|tasker-heartbeat}"
     ;;
 esac

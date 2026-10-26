@@ -1,6 +1,8 @@
 # WristWire relay as a systemd *user* unit.
 #
-# Install:
+# Easiest: run `./deploy.sh install-service` from the wristwire folder.
+#
+# By hand, from the wristwire folder:
 #   mkdir -p ~/.config/systemd/user
 #   cp systemd/wristwire.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload

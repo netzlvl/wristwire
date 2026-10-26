@@ -14,8 +14,8 @@ The plugin is thin on purpose. The relay (`wristwire adb-bridge`, normally the s
 ## Install
 
 ```bash
-# 1. The relay must be running; it owns the phone.
-systemctl --user enable --now wristwire
+# 1. The relay must be running; it owns the phone. From your wristwire folder:
+./deploy.sh install-service
 
 # 2. Link the plugin from your clone, then enable it.
 ln -sfn ~/wristwire/plugin ~/.hermes/plugins/wristwire

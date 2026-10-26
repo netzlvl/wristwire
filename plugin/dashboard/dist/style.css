@@ -1,0 +1,259 @@
+/* WristWire status view.
+   Inside Hermes it uses the dashboard's theme variables, so it follows the active theme.
+   On the relay's own page (body.ww-standalone) it defines those variables itself. */
+
+.ww-standalone {
+  --color-background: #f3f5f7;
+  --color-card: #ffffff;
+  --color-card-foreground: #1b2430;
+  --color-foreground: #1b2430;
+  --color-muted-foreground: #5b6675;
+  --color-border: #d5dbe2;
+  --color-success: #1f8a5b;
+  --color-warning: #a8700f;
+  --color-destructive: #c2412d;
+  --color-ring: #3b6ea8;
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ww-standalone {
+    --color-background: #12161c;
+    --color-card: #1a2029;
+    --color-card-foreground: #e6eaf0;
+    --color-foreground: #e6eaf0;
+    --color-muted-foreground: #94a0b0;
+    --color-border: #2c3542;
+    --color-success: #3fb984;
+    --color-warning: #e0a93b;
+    --color-destructive: #ef6a55;
+    --color-ring: #7aa7dc;
+  }
+}
+
+.ww-root {
+  --ww-ok: var(--color-success, #1f8a5b);
+  --ww-warn: var(--color-warning, #a8700f);
+  --ww-down: var(--color-destructive, #c2412d);
+  --ww-muted: var(--color-muted-foreground, #5b6675);
+  --ww-line: var(--color-border, #d5dbe2);
+  --ww-card: var(--color-card, #ffffff);
+  --ww-ink: var(--color-card-foreground, var(--color-foreground, #1b2430));
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1180px;
+  padding: 1.5rem;
+  color: var(--ww-ink);
+}
+.ww-root *, .ww-root *::before, .ww-root *::after { box-sizing: border-box; }
+.ww-standalone .ww-root { margin: 0 auto; padding: 2rem 1rem 3rem; }
+
+/* State colour, used by marks, wires and nodes alike */
+.ww-root [data-state="ok"] { --ww-c: var(--ww-ok); }
+.ww-root [data-state="warn"] { --ww-c: var(--ww-warn); }
+.ww-root [data-state="down"] { --ww-c: var(--ww-down); }
+.ww-root [data-state="idle"], .ww-root [data-state="unseen"] { --ww-c: var(--ww-muted); }
+
+.ww-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.ww-root code {
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, monospace;
+  font-size: .88em;
+  padding: .05em .3em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ww-line) 45%, transparent);
+}
+.ww-title { margin: 0 0 1.25rem; font-size: 1.15rem; font-weight: 600; }
+
+/* ---------------------------------------------------------------- header */
+
+.ww-head {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: 1rem 2rem; margin-bottom: 1.75rem;
+}
+.ww-verdict {
+  display: flex; align-items: center; gap: .65rem; margin: 0;
+  font-size: 1.45rem; line-height: 1.25; font-weight: 600; letter-spacing: -.01em;
+}
+.ww-verdict .ww-mark { width: 1.6rem; height: 1.6rem; font-size: 1rem; }
+.ww-updated { margin: .35rem 0 0 2.25rem; color: var(--ww-muted); font-size: .85rem; }
+.ww-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; max-width: 26rem; }
+.ww-test-note { margin: 0; font-size: .85rem; text-align: right; color: var(--ww-c, var(--ww-muted)); }
+
+.ww-button {
+  font: inherit; font-size: .9rem; font-weight: 600;
+  padding: .55rem 1rem; border-radius: 8px; cursor: pointer;
+  color: var(--ww-ink); background: var(--ww-card);
+  border: 1px solid color-mix(in srgb, var(--ww-ink) 35%, var(--ww-line));
+}
+.ww-button:hover:not([disabled]) { border-color: var(--ww-ink); }
+.ww-button[disabled] { opacity: .55; cursor: default; }
+.ww-button:focus-visible, .ww-input:focus-visible {
+  outline: 2px solid var(--color-ring, #3b6ea8); outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- marks */
+
+.ww-mark {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 1.15rem; height: 1.15rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; line-height: 1;
+  color: var(--ww-card); background: var(--ww-c);
+}
+.ww-mark[data-state="warn"] { border-radius: 3px; }
+.ww-mark[data-state="idle"], .ww-mark[data-state="unseen"] {
+  color: var(--ww-muted); background: transparent; border: 1.5px dashed var(--ww-muted);
+}
+
+/* ---------------------------------------------------------------- the chain */
+
+.ww-chain {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr);
+  align-items: start;
+  padding: 1.5rem 1.25rem;
+  border: 1px solid var(--ww-line);
+  border-radius: 14px;
+  background: var(--ww-card);
+}
+
+.ww-node { text-align: center; min-width: 0; }
+.ww-device {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 4.75rem; height: 4.75rem; border-radius: 999px;
+  color: var(--ww-ink);
+  border: 1.5px solid color-mix(in srgb, var(--ww-c) 55%, var(--ww-line));
+  background: color-mix(in srgb, var(--ww-c) 7%, var(--ww-card));
+}
+.ww-node[data-state="down"] .ww-device { border-width: 2px; border-color: var(--ww-down); }
+.ww-device .ww-mark { position: absolute; right: -.15rem; bottom: -.15rem; box-shadow: 0 0 0 3px var(--ww-card); }
+.ww-node-name { margin: .7rem 0 .3rem; font-size: .95rem; font-weight: 600; }
+.ww-facts { list-style: none; margin: 0; padding: 0; color: var(--ww-muted); font-size: .8rem; line-height: 1.45; }
+
+.ww-link { padding-top: 1rem; min-width: 0; }
+.ww-via { margin: 0 0 .5rem; text-align: center; font-size: .8rem; font-weight: 600; color: var(--ww-muted); }
+.ww-lane { margin-bottom: .55rem; padding-top: .7rem; }
+.ww-lane-text { margin: .7rem .35rem 0; font-size: .78rem; line-height: 1.35; color: var(--ww-muted); }
+.ww-lane[data-state="down"] .ww-lane-text, .ww-lane[data-state="warn"] .ww-lane-text { color: var(--ww-ink); }
+
+/* A wire is a line with an arrowhead; the arrow points the way traffic flows. */
+.ww-wire { position: relative; height: 0; margin: 0 .55rem; border-top: 2.5px solid var(--ww-c); }
+.ww-wire::after {
+  content: ""; position: absolute; top: -6.25px; width: 0; height: 0;
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.ww-lane[data-dir="in"] .ww-wire::after { right: -2px; border-left: 8px solid var(--ww-c); }
+.ww-lane[data-dir="out"] .ww-wire::after { left: -2px; border-right: 8px solid var(--ww-c); }
+.ww-lane[data-state="idle"] .ww-wire { border-top-width: 1.5px; }
+.ww-lane[data-state="idle"] .ww-wire::after { top: -5.75px; }
+.ww-lane[data-state="unseen"] .ww-wire { border-top: 2.5px dotted var(--ww-muted); }
+.ww-lane[data-state="warn"] .ww-wire { border-top-style: dashed; }
+.ww-break {
+  position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.3rem; height: 1.3rem; border-radius: 999px;
+  font-size: .8rem; font-weight: 700; line-height: 1;
+  color: var(--ww-down); background: var(--ww-card); border: 2px solid var(--ww-down);
+}
+
+.ww-legend { margin: .65rem .25rem 0; font-size: .8rem; color: var(--ww-muted); max-width: 72ch; }
+
+/* ---------------------------------------------------------------- sections */
+
+.ww-section { margin-top: 2rem; }
+.ww-section-title { margin: 0 0 .75rem; font-size: 1rem; font-weight: 600; }
+.ww-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.ww-problems .ww-list li {
+  display: flex; gap: .75rem; align-items: flex-start;
+  padding: .85rem 1rem; border-radius: 10px; background: var(--ww-card);
+  border: 1px solid var(--ww-line); border-left: 3px solid var(--ww-c);
+}
+.ww-problems .ww-mark { margin-top: .15rem; }
+.ww-problem-title { margin: 0; font-weight: 600; font-size: .92rem; }
+.ww-fix { margin: .2rem 0 0; font-size: .88rem; color: var(--ww-muted); max-width: 75ch; }
+.ww-empty { margin: 0; color: var(--ww-muted); font-size: .9rem; }
+.ww-bad { color: var(--ww-down); }
+
+.ww-table-wrap { overflow-x: auto; border: 1px solid var(--ww-line); border-radius: 10px; background: var(--ww-card); }
+.ww-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.ww-table th {
+  text-align: left; font-weight: 600; color: var(--ww-muted);
+  padding: .6rem .85rem; border-bottom: 1px solid var(--ww-line); white-space: nowrap;
+}
+.ww-table td { padding: .6rem .85rem; border-bottom: 1px solid var(--ww-line); vertical-align: top; }
+.ww-table tr:last-child td { border-bottom: 0; }
+.ww-table td:nth-child(n+2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ww-kind { color: var(--ww-muted); font-size: .78rem; }
+
+/* ---------------------------------------------------------------- key form */
+
+.ww-key-form { max-width: 34rem; }
+.ww-key-form p { color: var(--ww-muted); font-size: .92rem; }
+.ww-label { display: block; margin: 1.25rem 0 .4rem; font-weight: 600; font-size: .9rem; }
+.ww-key-row { display: flex; gap: .5rem; }
+.ww-input {
+  flex: 1; min-width: 0; font: inherit; padding: .55rem .7rem; border-radius: 8px;
+  color: var(--ww-ink); background: var(--ww-card); border: 1px solid var(--ww-line);
+}
+
+/* ---------------------------------------------------------------- narrow screens: chain runs top to bottom */
+
+@media (max-width: 860px) {
+  .ww-chain { grid-template-columns: 1fr; padding: 1.25rem 1rem; }
+  .ww-node { display: grid; grid-template-columns: auto 1fr; gap: 0 1rem; align-items: center; text-align: left; }
+  .ww-device { grid-row: span 2; width: 3.75rem; height: 3.75rem; }
+  .ww-device-art { width: 38px; height: 38px; }
+  .ww-node-name { margin: 0; }
+  .ww-link {
+    display: grid; grid-template-columns: 3.75rem 1fr; gap: .2rem 1rem;
+    padding: .6rem 0; margin-left: 0;
+  }
+  .ww-via { grid-column: 2; text-align: left; margin: 0; }
+  .ww-lane { grid-column: 1 / -1; display: grid; grid-template-columns: 3.75rem 1fr; gap: 1rem; align-items: center; margin: 0; }
+  .ww-lane { padding-top: 0; }
+  .ww-lane .ww-break { top: 50%; left: 0; }
+  .ww-table thead { display: none; }
+  .ww-table, .ww-table tbody, .ww-table tr, .ww-table td { display: block; }
+  .ww-table tr { padding: .7rem .85rem; border-bottom: 1px solid var(--ww-line); }
+  .ww-table tr:last-child { border-bottom: 0; }
+  .ww-table td { padding: .1rem 0; border: 0; white-space: normal; }
+  .ww-table td:nth-child(n+2) { display: flex; justify-content: space-between; gap: 1rem; font-size: .8rem; }
+  .ww-table td:nth-child(n+2)::before { content: attr(data-label); color: var(--ww-muted); }
+  .ww-table td:first-child { margin-bottom: .3rem; font-size: .9rem; }
+  .ww-lane .ww-wire {
+    justify-self: center; height: 2.6rem; margin: 0;
+    border-top: 0; border-left: 2.5px solid var(--ww-c);
+  }
+  .ww-lane[data-dir="in"] .ww-wire { margin-left: -.6rem; }
+  .ww-lane[data-dir="out"] .ww-wire { margin-left: .6rem; }
+  .ww-lane[data-dir="in"] .ww-wire::after {
+    right: auto; left: -6.25px; top: auto; bottom: -2px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 8px solid var(--ww-c); border-bottom: 0;
+  }
+  .ww-lane[data-dir="out"] .ww-wire::after {
+    left: -6.25px; top: -2px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-bottom: 8px solid var(--ww-c); border-top: 0;
+  }
+  .ww-lane[data-state="idle"] .ww-wire { border-left-width: 1.5px; }
+  .ww-lane[data-state="unseen"] .ww-wire { border-left: 2.5px dotted var(--ww-muted); }
+  .ww-lane[data-state="warn"] .ww-wire { border-left-style: dashed; }
+  .ww-lane-text { margin: 0; }
+  .ww-head { flex-direction: column; }
+  .ww-actions { align-items: flex-start; }
+  .ww-test-note { text-align: left; }
+  .ww-updated { margin-left: 0; }
+  .ww-verdict { font-size: 1.25rem; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ww-root * { transition: none !important; animation: none !important; }
+}

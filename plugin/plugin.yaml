@@ -1,0 +1,29 @@
+name: wristwire
+label: WristWire
+kind: standalone
+version: 0.2.0
+manifest_version: 2
+api_version: 1
+description: >-
+  Your direct line to AI from your Garmin watch. Hermes can message the watch and read what you
+  sent from it, and the WristWire tab in the dashboard shows whether the watch, phone, relay and
+  Hermes links are working. Needs the WristWire relay running on this machine.
+author: netzlvl
+license: MIT
+homepage: https://github.com/netzlvl/wristwire
+tags: [garmin, watch, messaging, voice]
+platforms: [linux, macos]
+provides_tools:
+  - watch_send
+  - watch_inbox
+  - watch_status
+optional_env:
+  - name: GARMIN_RELAY_ADMIN_KEY
+    description: "The relay's admin key. Only needed when the relay's .env isn't on this machine."
+    secret: true
+config_schema:
+  relay_url:
+    type: str
+    default: "http://127.0.0.1:8788"
+    label: "Relay address"
+    description: "Where the WristWire relay listens."

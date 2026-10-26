@@ -1,0 +1,31 @@
+# WristWire relay as a systemd *user* unit.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp systemd/wristwire.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now wristwire
+#   loginctl enable-linger "$USER"     # keep it running after you log out
+#
+# Logs: ~/.local/state/wristwire/relay.log
+# Uses the USB-ADB transport. For the HTTP transport (Tasker or an app built from
+# android/GarminBridgeService.kt), change `adb-bridge` to `serve` in ExecStart.
+
+[Unit]
+Description=WristWire relay (Garmin watch <-> AI agent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# systemd user units start with a bare PATH; adb, hermes and claude must be findable.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/wristwire adb-bridge
+Restart=always
+RestartSec=5
+StateDirectory=wristwire
+StandardOutput=append:%S/wristwire/relay.log
+StandardError=append:%S/wristwire/relay.log
+
+[Install]
+WantedBy=default.target

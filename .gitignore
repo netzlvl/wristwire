@@ -1,0 +1,14 @@
+# Local secrets and runtime databases (never commit!)
+.env
+*.env
+!*.env.example
+*.db
+*.db-shm
+*.db-wal
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+/dist/
+/build/
+.pytest_cache/

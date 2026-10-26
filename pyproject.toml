@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wristwire"
+version = "0.2.0"
+description = "Your direct line to AI: talk to any agent from your Garmin watch through Garmin Messenger"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/netzlvl/wristwire"
+Repository = "https://github.com/netzlvl/wristwire.git"
+Issues = "https://github.com/netzlvl/wristwire/issues"
+
+[project.scripts]
+wristwire = "wristwire_relay:main"
+
+[tool.setuptools]
+py-modules = ["wristwire_relay", "wristwire_adapters", "wristwire_status"]

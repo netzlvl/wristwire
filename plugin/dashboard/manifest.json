@@ -1,0 +1,14 @@
+{
+  "name": "wristwire",
+  "label": "WristWire",
+  "description": "Live status of the watch, phone, relay and agent links, with a test message button",
+  "icon": "Activity",
+  "version": "0.2.0",
+  "tab": {
+    "path": "/wristwire",
+    "position": "end"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

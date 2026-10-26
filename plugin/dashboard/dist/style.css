@@ -116,7 +116,7 @@
 
 .ww-chain {
   display: grid;
-  grid-template-columns: minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr) minmax(10rem, 1fr) minmax(8.5rem, .8fr);
+  grid-template-columns: minmax(7rem, .8fr) minmax(8rem, 1fr) minmax(7rem, .8fr) minmax(8rem, 1fr) minmax(7rem, .8fr) minmax(8rem, 1fr) minmax(7rem, .8fr);
   align-items: start;
   padding: 1.5rem 1.25rem;
   border: 1px solid var(--ww-line);
@@ -205,7 +205,11 @@
 
 /* ---------------------------------------------------------------- narrow screens: chain runs top to bottom */
 
-@media (max-width: 860px) {
+/* Size the layout by the space this view gets, not the window: inside Hermes the
+   sidebar takes part of the window. */
+.ww-view { container-type: inline-size; container-name: ww; }
+
+@container ww (max-width: 900px) {
   .ww-chain { grid-template-columns: 1fr; padding: 1.25rem 1rem; }
   .ww-node { display: grid; grid-template-columns: auto 1fr; gap: 0 1rem; align-items: center; text-align: left; }
   .ww-device { grid-row: span 2; width: 3.75rem; height: 3.75rem; }

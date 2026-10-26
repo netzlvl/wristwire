@@ -141,9 +141,10 @@ class RelayClient:
     def telemetry(self) -> Dict[str, Any]:
         return self._request("GET", "/v1/garmin/telemetry")
 
-    def status(self) -> Dict[str, Any]:
-        """Telemetry plus per-link health (``GET /v1/garmin/status``)."""
-        return self._request("GET", "/v1/garmin/status")
+    def status(self, reply_id: Optional[str] = None) -> Dict[str, Any]:
+        """Telemetry plus per-link health (``GET /v1/garmin/status``); optionally where one reply is."""
+        query = f"?reply={urllib.parse.quote(reply_id)}" if reply_id else ""
+        return self._request("GET", f"/v1/garmin/status{query}")
 
     def send(self, message: str, recipient: Optional[str] = None) -> Dict[str, Any]:
         payload: Dict[str, Any] = {"message": message}

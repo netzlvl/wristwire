@@ -1197,6 +1197,23 @@ class GarminRelayEngine:
             finally:
                 conn.close()
 
+    def reply_status(self, reply_id: str) -> Optional[Dict[str, Any]]:
+        """Where one queued reply is: for the status page's test-message tracker."""
+        with self._db_lock:
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT reply_id, status, attempts, last_error, delivery_method,
+                           created_at, delivered_at
+                    FROM outbound_replies WHERE reply_id = ?
+                    """,
+                    (reply_id,),
+                ).fetchone()
+                return dict(row) if row else None
+            finally:
+                conn.close()
+
     def ack_outbox_item(
         self,
         reply_id: str,
@@ -3183,7 +3200,11 @@ def make_handler(engine: GarminRelayEngine) -> type[BaseHTTPRequestHandler]:
                 # Telemetry plus per-link health; this is what the status page draws.
                 if not self._require_admin_or_hermes_auth(allow_ui_session=True):
                     return
-                self._send_json(HTTPStatus.OK, engine.get_telemetry(include_links=True))
+                data = engine.get_telemetry(include_links=True)
+                tracked = (urllib.parse.parse_qs(parsed.query).get("reply") or [""])[0][:64]
+                if tracked:
+                    data["tracked_reply"] = engine.reply_status(tracked)
+                self._send_json(HTTPStatus.OK, data)
                 return
 
             if path in ("/", "/status", "/status/"):

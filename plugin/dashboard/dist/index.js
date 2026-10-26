@@ -267,6 +267,7 @@
     var last = null;
     var loadedAt = 0;
     var testNote = null;
+    var trackedReply = null; // reply_id of the test message being followed
     var testing = false;
 
     root.classList.add("ww-view");
@@ -399,10 +400,11 @@
 
     function tick() {
       return Promise.resolve()
-        .then(host.load)
+        .then(function () { return host.load(trackedReply); })
         .then(function (data) {
           if (destroyed || !data) return;
           last = data;
+          if (trackedReply) followTest(data.tracked_reply);
           loadedAt = Date.now();
           render();
         })
@@ -423,9 +425,13 @@
       Promise.resolve()
         .then(host.sendTest)
         .then(function (res) {
-          testNote = res && res.ok
-            ? { state: "ok", text: "Queued. Watch the phone link: it turns green when the reply lands in Garmin Messenger, then check your watch." }
-            : { state: "down", text: "Not sent: " + ((res && (res.error || (res.result && res.result.status))) || "the relay refused it") };
+          if (res && res.ok) {
+            trackedReply = (res.result && res.result.reply_id) || null;
+            sentAt = Date.now();
+            testNote = { state: "idle", text: "Test queued. Waiting for the relay to type it into Garmin Messenger\u2026" };
+          } else {
+            testNote = { state: "down", text: "Not sent: " + ((res && (res.error || (res.result && res.result.status))) || "the relay refused it") };
+          }
         })
         .catch(function (err) {
           testNote = { state: "down", text: "Not sent: " + String((err && err.message) || err) };
@@ -434,6 +440,30 @@
           testing = false;
           tick();
         });
+    }
+
+    var sentAt = 0;
+
+    // Follow the one test message from queued to delivered (or failed), so the note
+    // reports that message rather than the links' general health.
+    function followTest(r) {
+      if (!r) return;
+      var waited = Math.round((Date.now() - sentAt) / 1000);
+      if (r.status === "delivered") {
+        var t = new Date(r.delivered_at * 1000);
+        var hhmm = ("0" + t.getHours()).slice(-2) + ":" + ("0" + t.getMinutes()).slice(-2);
+        testNote = { state: "ok", text: "Test delivered to Garmin Messenger at " + hhmm + ". It should reach your watch shortly. If it never does, the watch side (LTE, Garmin) is the problem." };
+        trackedReply = null;
+      } else if (r.status === "delivery_failed") {
+        testNote = { state: "down", text: "Test couldn't be delivered: " + String(r.last_error || "unknown error").split(":")[0].replace(/_/g, " ") + ". See What needs attention below." };
+        trackedReply = null;
+      } else if (r.last_error) {
+        testNote = { state: "warn", text: "Delivery attempt " + r.attempts + " failed (" + String(r.last_error).split(":")[0].replace(/_/g, " ") + "). Retrying\u2026" };
+      } else if (waited > 180) {
+        testNote = { state: "warn", text: "Still waiting after " + Math.round(waited / 60) + " min. Is the relay's phone link running?" };
+      } else {
+        testNote = { state: "idle", text: "Typing the test into Garmin Messenger on the phone\u2026 (" + waited + " s)" };
+      }
     }
 
     function onVisible() {
@@ -463,7 +493,9 @@
       var ref = SDK.hooks.useRef(null);
       SDK.hooks.useEffect(function () {
         var view = createView(ref.current, {
-          load: function () { return SDK.fetchJSON(API + "/status"); },
+          load: function (reply) {
+            return SDK.fetchJSON(API + "/status" + (reply ? "?reply=" + encodeURIComponent(reply) : ""));
+          },
           sendTest: function () {
             return SDK.fetchJSON(API + "/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
           },
@@ -560,8 +592,8 @@
     var body = el("div");
     mount.appendChild(body);
     view = createView(body, {
-      load: function () {
-        return relayFetch("/v1/garmin/status").then(function (data) {
+      load: function (reply) {
+        return relayFetch("/v1/garmin/status" + (reply ? "?reply=" + encodeURIComponent(reply) : "")).then(function (data) {
           data.relay_reachable = true;
           return data;
         });

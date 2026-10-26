@@ -474,6 +474,16 @@ class HermesGarminRelayAcceptanceTests(unittest.TestCase):
         headers = {"Authorization": f"Bearer {self.config.relay_admin_key}", "Content-Type": "application/json"}
         self.assertEqual(self._raw("POST", "/v1/garmin/send", headers, b"{not json")[0], 400)
 
+    def test_status_tracks_one_test_reply_to_delivery(self) -> None:
+        _, sent = self._admin_request("POST", "/v1/garmin/send", {"message": "WristWire test"})
+        rid = sent["reply_id"]
+        _, st = self._admin_request("GET", f"/v1/garmin/status?reply={rid}")
+        self.assertEqual(st["tracked_reply"]["status"], "pending_delivery")
+        self.engine.ack_outbox_item(rid, delivered=True, delivery_method="usb_adb_ui")
+        _, st = self._admin_request("GET", f"/v1/garmin/status?reply={rid}")
+        self.assertEqual(st["tracked_reply"]["status"], "delivered")
+        self.assertIsNotNone(st["tracked_reply"]["delivered_at"])
+
     def test_test_message_is_not_counted_as_watch_traffic(self) -> None:
         self._admin_request("POST", "/v1/garmin/send", {"message": "WristWire test"})
         _, status = self._admin_request("GET", "/v1/garmin/status")

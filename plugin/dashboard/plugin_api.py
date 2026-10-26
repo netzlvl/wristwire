@@ -45,13 +45,13 @@ def _client():
 
 
 @router.get("/status")
-def status():
+def status(reply: str = ""):
     try:
         client = _client()
     except rc.RelayError as exc:
         return {"relay_reachable": False, "error_kind": exc.kind, "error": str(exc)}
     try:
-        data = client.status()
+        data = client.status(reply_id=reply or None)
     except rc.RelayError as exc:
         return {
             "relay_reachable": False,

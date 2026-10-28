@@ -979,6 +979,33 @@ class AdbAutomationTests(unittest.TestCase):
         self.assertEqual(parsed[0]["sender"], "FENIX")
         self.assertEqual(parsed[0]["body"], "Hello")
 
+    def test_voice_note_wrapper_does_not_trigger_tier_c(self) -> None:
+        from wristwire_relay import classify_command_tier, unwrap_voice_note
+
+        raw = "Voice Message: \u201cDownload the Space 92 Barcelona set to my Garmin watch.\u201d"
+        inner = unwrap_voice_note(raw)
+        self.assertEqual(inner, "Download the Space 92 Barcelona set to my Garmin watch.")
+        self.assertEqual(classify_command_tier(inner)[0], "TIER_A")
+        self.assertEqual(unwrap_voice_note('Voice Message: "approve AB12CD"'), "approve AB12CD")
+        self.assertEqual(unwrap_voice_note("plain text"), "plain text")
+
+    def test_reply_with_non_ascii_is_confirmed_after_send(self) -> None:
+        reply = "Clear and 67\u00b0F on the UWS. 5 days to go."
+        typed = AdbGarminBridge.escape_input_text(reply).replace("%s", " ")
+        bridge = ScriptedAdbBridge(
+            self.engine,
+            [
+                _thread_screen(),
+                _thread_screen(),
+                _thread_screen(),
+                _thread_screen(typed),
+                _thread_screen(messages=[typed]),  # the bubble shows what was typed
+            ],
+        )
+        delivered, method, error = bridge.deliver_reply(reply, recipient="fenix")
+        self.assertTrue(delivered, error)
+        self.assertEqual(method, "usb_adb_ui")
+
     def test_input_text_escaping(self) -> None:
         escaped = AdbGarminBridge.escape_input_text("All green \u2014 3 nodes up.\nNext run 09:00")
         self.assertEqual(escaped, "All%sgreen%s-%s3%snodes%sup.%sNext%srun%s09:00")

@@ -391,6 +391,22 @@ TIER_B_PATTERNS = [
 ]
 
 
+_VOICE_WRAPPER_RE = re.compile(
+    r"^\s*voice\s+message\s*:\s*[\"\u201c\u201d']?(.*?)[\"\u201c\u201d']?\s*$", re.I | re.S
+)
+
+
+def unwrap_voice_note(text: str) -> str:
+    """Strip Garmin Messenger's `Voice Message: "..."` wrapper around a transcript.
+
+    Left in place, the word "Message" plus any "to" in the transcript matched the Tier C
+    rule for messaging other people, so a plain voice request was held for approval.
+    It also kept spoken control words ("approve AB12CD") from being recognised.
+    """
+    match = _VOICE_WRAPPER_RE.match(text or "")
+    return match.group(1).strip() if match and match.group(1).strip() else (text or "")
+
+
 def classify_command_tier(text: str) -> Tuple[str, str]:
     stripped = text.strip()
     lower = stripped.lower()
@@ -1350,9 +1366,9 @@ class GarminRelayEngine:
                 "error": "sender_not_allowlisted",
             }
 
-        raw_text = str(
+        raw_text = unwrap_voice_note(str(
             payload.get("transcript_text") or payload.get("message_text") or ""
-        ).strip()
+        ).strip())
         if not raw_text:
             return HTTPStatus.BAD_REQUEST, {
                 "status": "error",
@@ -2820,6 +2836,7 @@ class AdbGarminBridge:
             self._clear_composer()
             typed, reason = self._type_and_confirm(text)
             if not typed:
+                self._discard_typed_text()
                 return False, "usb_adb_ui", reason
             # The confirming read already shows the send button; no second dump.
             nodes = self._last_nodes
@@ -2834,10 +2851,13 @@ class AdbGarminBridge:
                 self._adb_cmd("shell", "input", "keyevent", "66")
             self._pause(1.5)
             nodes = self._ui_nodes()
-            needle = text.strip().lower()[:24]
+            # Compare in the typed form: `input text` can't type non-ASCII (67°F becomes
+            # "67 F"), so the bubble never matched the original and a sent reply looked unsent.
+            norm = lambda v: self.escape_input_text(v).replace("%s", " ").lower()
+            needle = norm(text)[:24]
             echoed = any(
                 needle
-                and needle in n["text"].strip().lower()
+                and needle in norm(n["text"])
                 and not n["rid"].endswith("/newMessageInputEditText")
                 for n in nodes
             )
@@ -2847,10 +2867,23 @@ class AdbGarminBridge:
             if composer_after is not None and not composer_after.strip():
                 # Composer cleared by the send tap; the bubble had already scrolled away.
                 return True, "usb_adb_ui_unverified", None
+            self._discard_typed_text()
             return False, "usb_adb_ui", "send_not_confirmed"
         except Exception as exc:
             logger.error("ADB reply delivery failed: %s", exc)
             return False, "usb_adb_ui", str(exc)
+
+    def _discard_typed_text(self) -> None:
+        """Empty the composer after a failed attempt.
+
+        A reply left typed in the box becomes a saved draft, which opens Messenger in
+        its expanded compose view, and that view drops typed keys: one failed long reply
+        used to block every later delivery until someone cleared the draft by hand.
+        """
+        try:
+            self._clear_composer()
+        except Exception as exc:  # cleanup must never hide the original failure
+            logger.debug("could not clear composer after failed delivery: %s", exc)
 
     def send_reply_over_adb(self, reply_text: str, recipient: Optional[str] = None) -> bool:
         return self.deliver_reply(reply_text, recipient=recipient)[0]
